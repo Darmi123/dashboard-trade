@@ -3,14 +3,53 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<title>Dashboard Trade</title>
-</head>
-<body style="background:#0e1117;color:#fff;font-family:sans-serif;text-align:center">
-<h2>Dashboard Trade</h2>
-<p id="n"></p>
+<title>DRM TRADE</title>
+<style>
+body{margin:0;background:#0e1117;color:#fff;font-family:sans-serif;padding:16px}
+h2{text-align:center;margin:0 0 12px}
+.card{background:#1a1f2b;border-radius:12px;padding:14px;margin-bottom:12px}
+.big{font-size:32px;font-weight:bold;color:#2ecc71}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{flex:1;padding:10px;border:0;border-radius:10px;background:#1a1f2b;color:#aaa;font-size:14px}
+.tabs button.on{background:#2ecc71;color:#000;font-weight:bold}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #2a3040}
+.up{color:#2ecc71}.down{color:#e74c3c}
+.sec{display:none}.sec.on{display:block}
+small{color:#777}
+</style></head>
+<body>
+<h2>DRM TRADE</h2>
+
+<div class="card">
+<div style="color:#aaa">PnL Hari Ini</div>
+<div class="big">+$16.00</div>
+</div>
+
+<div class="tabs">
+<button class="on" onclick="tab('pos',this)">Posisi Terbuka</button>
+<button onclick="tab('his',this)">History</button>
+</div>
+
+<div id="pos" class="sec on card">
+<div class="row"><span>$PEPE2</span><span class="up">+12.4%</span></div>
+<div class="row"><span>$DOGEX</span><span class="down">-3.1%</span></div>
+</div>
+
+<div id="his" class="sec card">
+<div class="row"><span>$MOON</span><span class="up">+$8.20</span></div>
+<div class="row"><span>$CATZ</span><span class="down">-$2.50</span></div>
+<div class="row"><span>$WIF2</span><span class="up">+$10.30</span></div>
+</div>
+
+<small>Data contoh, belum terhubung ke bot.</small>
+
 <script>
 const tg = Telegram.WebApp; tg.ready(); tg.expand();
-document.getElementById('n').textContent =
-  'Halo ' + (tg.initDataUnsafe.user?.first_name || '');
+function tab(id, btn){
+  document.querySelectorAll('.sec').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.tabs button').forEach(e=>e.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  btn.classList.add('on');
+}
 </script>
 </body></html>
