@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>Dashboard Trade</title>
+</head>
+<body style="background:#0e1117;color:#fff;font-family:sans-serif;text-align:center">
+<h2>Dashboard Trade</h2>
+<p id="n"></p>
+<script>
+const tg = Telegram.WebApp; tg.ready(); tg.expand();
+document.getElementById('n').textContent =
+  'Halo ' + (tg.initDataUnsafe.user?.first_name || '');
+</script>
+</body></html>
