@@ -22,7 +22,8 @@ small{color:#777}
 
 <div class="card">
 <div style="color:#aaa">PnL Hari Ini</div>
-<div class="big">+$16.00</div>
+<div class="big" id="pnl">$0.00</div>
+<small id="total"></small>
 </div>
 
 <div class="tabs">
@@ -30,26 +31,66 @@ small{color:#777}
 <button onclick="tab('his',this)">History</button>
 </div>
 
-<div id="pos" class="sec on card">
-<div class="row"><span>$PEPE2</span><span class="up">+12.4%</span></div>
-<div class="row"><span>$DOGEX</span><span class="down">-3.1%</span></div>
-</div>
+<div id="pos" class="sec on card"></div>
+<div id="his" class="sec card"></div>
 
-<div id="his" class="sec card">
-<div class="row"><span>$MOON</span><span class="up">+$8.20</span></div>
-<div class="row"><span>$CATZ</span><span class="down">-$2.50</span></div>
-<div class="row"><span>$WIF2</span><span class="up">+$10.30</span></div>
-</div>
-
-<small>Data contoh, belum terhubung ke bot.</small>
+<small id="status">Memuat data...</small>
 
 <script>
+const SUPABASE_URL = 'https://qehuvoyfimfwijrmbpxc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_WAlE9s4GwxiqoFbAQRBeWQ_jn6KdzLU';
+
 const tg = Telegram.WebApp; tg.ready(); tg.expand();
+
 function tab(id, btn){
   document.querySelectorAll('.sec').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.tabs button').forEach(e=>e.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   btn.classList.add('on');
 }
+function fmt(n){const v=Number(n)||0;return (v>=0?'+':'-')+'$'+Math.abs(v).toFixed(2);}
+function cls(n){return Number(n)>=0?'up':'down';}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function render(rows){
+  const open = rows.filter(t=>t.status==='open');
+  const closed = rows.filter(t=>t.status!=='open');
+  const today = new Date().toDateString();
+  const pnlToday = closed
+    .filter(t=>t.closed_at && new Date(t.closed_at).toDateString()===today)
+    .reduce((a,t)=>a+(Number(t.pnl_usd)||0),0);
+  const pnlTotal = closed.reduce((a,t)=>a+(Number(t.pnl_usd)||0),0);
+
+  const el = document.getElementById('pnl');
+  el.textContent = fmt(pnlToday);
+  el.className = 'big ' + cls(pnlToday);
+  document.getElementById('total').textContent =
+    'Total: ' + fmt(pnlTotal) + ' dari ' + closed.length + ' trade';
+
+  document.getElementById('pos').innerHTML = open.length
+    ? open.map(t=>'<div class="row"><span>'+esc(t.token_symbol)+' <small>$'+Number(t.size_usd).toFixed(0)+' | sisa '+Number(t.remaining_pct).toFixed(0)+'%</small></span><span>@ '+esc(t.entry_price)+'</span></div>').join('')
+    : '<small>Belum ada posisi terbuka.</small>';
+
+  document.getElementById('his').innerHTML = closed.length
+    ? closed.map(t=>'<div class="row"><span>'+esc(t.token_symbol)+' <small>'+esc(t.exit_reason||'')+'</small></span><span class="'+cls(t.pnl_usd)+'">'+fmt(t.pnl_usd)+'</span></div>').join('')
+    : '<small>Belum ada history trade.</small>';
+}
+
+async function load(){
+  try{
+    const r = await fetch(
+      SUPABASE_URL + '/rest/v1/trades?select=*&order=opened_at.desc&limit=200',
+      { headers: { apikey: SUPABASE_KEY } }
+    );
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    render(await r.json());
+    document.getElementById('status').textContent =
+      'Diperbarui ' + new Date().toLocaleTimeString('id-ID');
+  }catch(e){
+    document.getElementById('status').textContent = 'Gagal memuat data: ' + e.message;
+  }
+}
+load();
+setInterval(load, 15000);
 </script>
 </body></html>
