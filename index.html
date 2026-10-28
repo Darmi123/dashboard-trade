@@ -29,7 +29,9 @@ small{color:#777}
 </style></head>
 <body>
 <h2>DRM TRADE</h2>
-
+<div style="text-align:center;margin-bottom:10px">
+<button id="suara" onclick="toggleSuara()" style="background:#1a1f2b;color:#aaa;border:0;border-radius:10px;padding:8px 14px;font-size:13px">🔇 Suara mati</button>
+</div>
 <div class="card">
 <div style="color:#aaa">PnL Hari Ini</div>
 <div class="big" id="pnl">$0.00</div>
@@ -81,6 +83,17 @@ async function ambil(path){
 function render(rows){
   const open = rows.filter(t=>t.status==='open');
   const closed = rows.filter(t=>t.status!=='open');
+  const idTutup = new Set(closed.map(t=>t.id));
+if (tutupLihat) {
+  for (const t of closed) {
+    if (!tutupLihat.has(t.id)) {
+      const untung = Number(t.pnl_usd) >= 0;
+      bunyi(untung ? 'untung' : 'rugi');
+      try { tg.HapticFeedback.notificationOccurred(untung ? 'success' : 'error'); } catch(e) {}
+    }
+  }
+}
+tutupLihat = idTutup;
   const today = new Date().toDateString();
   const pnlToday = closed
     .filter(t=>t.closed_at && new Date(t.closed_at).toDateString()===today)
@@ -131,10 +144,40 @@ function renderFeed(rows){
 
   sudahLihat = new Set(rows.map(s=>s.id));
   if (baruBeli.length) {
-    try { tg.HapticFeedback.notificationOccurred('success'); } catch(e) {}
-  }
+    try { tg.HapticFeedback.notificationOccurred('success'); } catch(e) {}    
+  }bunyi('beli');
 }
-
+let suaraOn = false, ac = null, tutupLihat = null;
+function toggleSuara(){
+  suaraOn = !suaraOn;
+  const b = document.getElementById('suara');
+  if (suaraOn) {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+    } catch(e) { suaraOn = false; }
+  }
+  b.textContent = suaraOn ? '🔔 Suara nyala' : '🔇 Suara mati';
+  if (suaraOn) bunyi('beli');
+}
+function nada(f, mulai, dur){
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, ac.currentTime + mulai);
+  g.gain.exponentialRampToValueAtTime(0.25, ac.currentTime + mulai + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + mulai + dur);
+  o.connect(g); g.connect(ac.destination);
+  o.start(ac.currentTime + mulai);
+  o.stop(ac.currentTime + mulai + dur + 0.05);
+}
+function bunyi(jenis){
+  if (!suaraOn || !ac) return;
+  try {
+    if (jenis === 'beli') { nada(660, 0, 0.12); nada(880, 0.14, 0.18); }
+    else if (jenis === 'untung') { nada(784, 0, 0.12); nada(988, 0.12, 0.12); nada(1319, 0.24, 0.25); }
+    else if (jenis === 'rugi') { nada(330, 0, 0.2); nada(247, 0.2, 0.3); }
+  } catch(e) {}
+}
 async function load(){
   const [a, b] = await Promise.allSettled([
     ambil('trades?select=*&order=opened_at.desc&limit=200'),
