@@ -10,12 +10,22 @@ h2{text-align:center;margin:0 0 12px}
 .card{background:#1a1f2b;border-radius:12px;padding:14px;margin-bottom:12px}
 .big{font-size:32px;font-weight:bold;color:#2ecc71}
 .tabs{display:flex;gap:8px;margin-bottom:12px}
-.tabs button{flex:1;padding:10px;border:0;border-radius:10px;background:#1a1f2b;color:#aaa;font-size:14px}
+.tabs button{flex:1;padding:10px;border:0;border-radius:10px;background:#1a1f2b;color:#aaa;font-size:13px}
 .tabs button.on{background:#2ecc71;color:#000;font-weight:bold}
 .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #2a3040}
 .up{color:#2ecc71}.down{color:#e74c3c}
 .sec{display:none}.sec.on{display:block}
 small{color:#777}
+.sig{padding:8px 0;border-bottom:1px solid #2a3040}
+.sig .atas{display:flex;justify-content:space-between;align-items:center}
+.badge{font-size:11px;padding:2px 8px;border-radius:8px;margin-left:8px;color:#000;font-weight:bold}
+.b-dibeli{background:#2ecc71}
+.b-ditolak{background:#e74c3c;color:#fff}
+.b-nyaris{background:#f1c40f}
+.baru{animation:masuk 1.2s ease-out}
+@keyframes masuk{0%{opacity:0;transform:translateY(-12px);background:#2a3b2f}100%{opacity:1;transform:none;background:transparent}}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2ecc71;margin-right:6px;animation:kedip 1.6s infinite}
+@keyframes kedip{0%,100%{opacity:1}50%{opacity:.25}}
 </style></head>
 <body>
 <h2>DRM TRADE</h2>
@@ -27,12 +37,17 @@ small{color:#777}
 </div>
 
 <div class="tabs">
-<button class="on" onclick="tab('pos',this)">Posisi Terbuka</button>
+<button class="on" onclick="tab('pos',this)">Posisi</button>
 <button onclick="tab('his',this)">History</button>
+<button onclick="tab('live',this)">Live</button>
 </div>
 
 <div id="pos" class="sec on card"></div>
 <div id="his" class="sec card"></div>
+<div id="live" class="sec card">
+<div style="margin-bottom:8px"><span class="dot"></span><small id="liveinfo">Memuat sinyal...</small></div>
+<div id="feed"></div>
+</div>
 
 <small id="status">Memuat data...</small>
 
@@ -51,6 +66,17 @@ function tab(id, btn){
 function fmt(n){const v=Number(n)||0;return (v>=0?'+':'-')+'$'+Math.abs(v).toFixed(2);}
 function cls(n){return Number(n)>=0?'up':'down';}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function lalu(iso){
+  const d = Math.max(0, Math.round((Date.now() - new Date(iso)) / 1000));
+  if (d < 60) return d + ' dtk lalu';
+  if (d < 3600) return Math.round(d/60) + ' mnt lalu';
+  return Math.round(d/3600) + ' jam lalu';
+}
+async function ambil(path){
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, { headers: { apikey: SUPABASE_KEY } });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
 
 function render(rows){
   const open = rows.filter(t=>t.status==='open');
@@ -76,21 +102,52 @@ function render(rows){
     : '<small>Belum ada history trade.</small>';
 }
 
-async function load(){
-  try{
-    const r = await fetch(
-      SUPABASE_URL + '/rest/v1/trades?select=*&order=opened_at.desc&limit=200',
-      { headers: { apikey: SUPABASE_KEY } }
-    );
-    if(!r.ok) throw new Error('HTTP ' + r.status);
-    render(await r.json());
-    document.getElementById('status').textContent =
-      'Diperbarui ' + new Date().toLocaleTimeString('id-ID');
-  }catch(e){
-    document.getElementById('status').textContent = 'Gagal memuat data: ' + e.message;
+let sudahLihat = null;
+function renderFeed(rows){
+  const baruBeli = [];
+  const html = rows.map(s=>{
+    const baru = sudahLihat && !sudahLihat.has(s.id);
+    if (baru && s.decision === 'dibeli') baruBeli.push(s);
+    let ubah = '<small>menunggu 5m</small>';
+    if (s.price_5m !== null && s.price_5m !== undefined){
+      if (Number(s.price_5m) === 0) {
+        ubah = '<span class="down">hilang</span>';
+      } else {
+        const p = (Number(s.price_5m) / Number(s.price) - 1) * 100;
+        ubah = '<span class="'+cls(p)+'">'+(p>=0?'+':'')+p.toFixed(1)+'% (5m)</span>';
+      }
+    }
+    return '<div class="sig'+(baru?' baru':'')+'">'
+      + '<div class="atas"><span>'+esc(s.token_symbol||'?')
+      + '<span class="badge b-'+esc(s.decision)+'">'+esc(s.decision)+'</span></span>'
+      + '<span>'+ubah+'</span></div>'
+      + '<small>'+esc(s.reason||'lolos semua aturan')+' · '+lalu(s.created_at)+'</small></div>';
+  }).join('');
+
+  document.getElementById('feed').innerHTML = html || '<small>Belum ada sinyal.</small>';
+  document.getElementById('liveinfo').textContent = rows.length
+    ? 'Sinyal terakhir ' + lalu(rows[0].created_at) + ' · ' + rows.length + ' terbaru'
+    : 'Belum ada sinyal';
+
+  sudahLihat = new Set(rows.map(s=>s.id));
+  if (baruBeli.length) {
+    try { tg.HapticFeedback.notificationOccurred('success'); } catch(e) {}
   }
 }
+
+async function load(){
+  const [a, b] = await Promise.allSettled([
+    ambil('trades?select=*&order=opened_at.desc&limit=200'),
+    ambil('signals?select=id,created_at,token_symbol,decision,reason,price,price_5m&order=created_at.desc&limit=40'),
+  ]);
+  const pesan = [];
+  if (a.status === 'fulfilled') render(a.value); else pesan.push('trades: ' + a.reason.message);
+  if (b.status === 'fulfilled') renderFeed(b.value); else pesan.push('sinyal: ' + b.reason.message);
+  document.getElementById('status').textContent = pesan.length
+    ? 'Gagal memuat ' + pesan.join(', ')
+    : 'Diperbarui ' + new Date().toLocaleTimeString('id-ID');
+}
 load();
-setInterval(load, 15000);
+setInterval(load, 10000);
 </script>
 </body></html>
