@@ -32,6 +32,10 @@ small{color:var(--m)}
 .b-dibeli{background:var(--g)}.b-ditolak{background:var(--r);color:#fff}.b-nyaris{background:var(--y)}
 .baru{animation:m 1.2s ease-out}
 @keyframes m{0%{opacity:0;transform:translateY(-10px);background:#1c2f24}100%{opacity:1;transform:none;background:transparent}}
+.ag{background:var(--p);border:1px solid var(--b);border-radius:10px;padding:10px;margin-bottom:8px;font-size:13px}
+.ah{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.ah b{font-size:12px;letter-spacing:.5px}
+.at{font-size:10px;border:1px solid;border-radius:6px;padding:1px 6px}
 </style></head>
 <body>
 <div class="top">
@@ -53,6 +57,7 @@ small{color:var(--m)}
 <button class="on" onclick="tab('pos',this)">Posisi</button>
 <button onclick="tab('his',this)">History</button>
 <button onclick="tab('live',this)">Live</button>
+  <button onclick="tab('agen',this)">Agen</button>
 </div>
 
 <div id="pos" class="sec on card"></div>
@@ -61,6 +66,7 @@ small{color:var(--m)}
 <div style="margin-bottom:8px"><span class="dot"></span><small id="liveinfo">Memuat sinyal...</small></div>
 <div id="feed"></div>
 </div>
+  <div id="agen" class="sec"></div>
 <small id="status">Memuat data...</small>
 
 <script>
@@ -186,5 +192,39 @@ async function load(){
 }
 load();
 setInterval(load,10000);
+ function kartuAgen(nama,tag,warna,b1,b2){
+  return '<div class="ag"><div class="ah"><b>'+nama+'</b><span class="at" style="color:'+warna+';border-color:'+warna+'">'+tag+'</span></div><div>'+b1+'</div><small>'+b2+'</small></div>';
+}
+async function muatAgen(){
+  try{
+    const sejak=new Date(Date.now()-24*3600000).toISOString();
+    const rows=await ambil('signals?select=decision,created_at,rug_score&created_at=gte.'+sejak+'&order=created_at.desc&limit=1000');
+    const n=rows.length;
+    const dibeli=rows.filter(s=>s.decision==='dibeli').length;
+    const ditolak=rows.filter(s=>s.decision==='ditolak').length;
+    const nyaris=rows.filter(s=>s.decision==='nyaris').length;
+    const rugIsi=rows.filter(s=>s.rug_score!==null).length;
+    const menit=n?(Date.now()-new Date(rows[0].created_at))/60000:9999;
+    const terakhir=n?lalu(rows[0].created_at):'-';
+    const hijau='#2ecc71',kuning='#f1c40f',abu='#7d8b99';
+    const hidup=menit<30;
+    const tagBot=hidup?'AKTIF':'SEPI';
+    const warnaBot=hidup?hijau:kuning;
+    const np=document.getElementById('np').textContent;
+    const tot=document.getElementById('tot').textContent;
+    document.getElementById('agen').innerHTML=
+      kartuAgen('SCANNER',tagBot,warnaBot,n+' sinyal tercatat / 24 jam','terakhir '+terakhir+' · '+nyaris+' nyaris, '+dibeli+' dibeli')
+      +kartuAgen('VERIFIKASI SILANG',tagBot,warnaBot,ditolak+' ditolak / 24 jam','cek likuiditas dan harga di DexScreener')
+      +kartuAgen('RUG CHECK','BELUM AKTIF',abu,rugIsi+' sinyal sudah dianalisis (uji)','belum dipasang di bot, masih tahap pengujian')
+      +kartuAgen('SIZER','TETAP',hijau,'$25 per posisi · maks 5 posisi','belum berbasis modal')
+      +kartuAgen('EXECUTOR','SIMULASI',hijau,np+' posisi terbuka','slippage simulasi 3% masuk dan keluar')
+      +kartuAgen('LOGGER',tagBot,warnaBot,n+' keputusan / 24 jam','tiap sinyal dicatat beserta alasannya')
+      +kartuAgen('EQUITY','PNL',abu,tot,'dari trade yang sudah ditutup');
+  }catch(e){
+    document.getElementById('agen').innerHTML='<small>Gagal memuat agen: '+esc(e.message)+'</small>';
+  }
+}
+muatAgen();
+setInterval(muatAgen,20000); 
 </script>
 </body></html>
