@@ -5,38 +5,49 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>DRM TRADE</title>
 <style>
-body{margin:0;background:#0e1117;color:#fff;font-family:sans-serif;padding:16px}
-h2{text-align:center;margin:0 0 12px}
-.card{background:#1a1f2b;border-radius:12px;padding:14px;margin-bottom:12px}
-.big{font-size:32px;font-weight:bold;color:#2ecc71}
-.tabs{display:flex;gap:8px;margin-bottom:12px}
-.tabs button{flex:1;padding:10px;border:0;border-radius:10px;background:#1a1f2b;color:#aaa;font-size:13px}
-.tabs button.on{background:#2ecc71;color:#000;font-weight:bold}
-.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #2a3040}
-.up{color:#2ecc71}.down{color:#e74c3c}
+:root{--bg:#0b0f14;--p:#111821;--b:#1e2a38;--g:#2ecc71;--r:#e74c3c;--y:#f1c40f;--t:#e6edf3;--m:#7d8b99}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t);font-family:ui-monospace,Menlo,Consolas,monospace;padding:14px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.tag{font-size:10px;color:var(--g);border:1px solid var(--g);border-radius:6px;padding:1px 6px;margin-left:8px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--g);margin-right:6px;animation:k 1.6s infinite}
+@keyframes k{50%{opacity:.25}}
+#suara{background:var(--p);color:var(--m);border:1px solid var(--b);border-radius:8px;padding:6px 10px;font:inherit;font-size:12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.st{background:var(--p);border:1px solid var(--b);border-radius:10px;padding:10px}
+.st span{display:block;font-size:10px;color:var(--m);letter-spacing:.5px}
+.st b{font-size:20px}
+.st small{margin-left:6px;font-size:11px}
+.card{background:var(--p);border:1px solid var(--b);border-radius:10px;padding:12px;margin-bottom:8px}
+.tabs{display:flex;gap:6px;margin-bottom:8px}
+.tabs button{flex:1;padding:9px;border:1px solid var(--b);border-radius:8px;background:var(--p);color:var(--m);font:inherit;font-size:12px}
+.tabs button.on{background:var(--g);color:#000;font-weight:bold;border-color:var(--g)}
+.row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--b)}
+.up{color:var(--g)}.down{color:var(--r)}
 .sec{display:none}.sec.on{display:block}
-small{color:#777}
-.sig{padding:8px 0;border-bottom:1px solid #2a3040}
-.sig .atas{display:flex;justify-content:space-between;align-items:center}
-.badge{font-size:11px;padding:2px 8px;border-radius:8px;margin-left:8px;color:#000;font-weight:bold}
-.b-dibeli{background:#2ecc71}
-.b-ditolak{background:#e74c3c;color:#fff}
-.b-nyaris{background:#f1c40f}
-.baru{animation:masuk 1.2s ease-out}
-@keyframes masuk{0%{opacity:0;transform:translateY(-12px);background:#2a3b2f}100%{opacity:1;transform:none;background:transparent}}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2ecc71;margin-right:6px;animation:kedip 1.6s infinite}
-@keyframes kedip{0%,100%{opacity:1}50%{opacity:.25}}
+small{color:var(--m)}
+.sig{padding:7px 0;border-bottom:1px solid var(--b)}
+.sig .a{display:flex;justify-content:space-between;align-items:center}
+.bd{font-size:10px;padding:1px 7px;border-radius:6px;margin-left:8px;color:#000;font-weight:bold}
+.b-dibeli{background:var(--g)}.b-ditolak{background:var(--r);color:#fff}.b-nyaris{background:var(--y)}
+.baru{animation:m 1.2s ease-out}
+@keyframes m{0%{opacity:0;transform:translateY(-10px);background:#1c2f24}100%{opacity:1;transform:none;background:transparent}}
 </style></head>
 <body>
-<h2>DRM TRADE</h2>
-<div style="text-align:center;margin-bottom:10px">
-<button id="suara" onclick="toggleSuara()" style="background:#1a1f2b;color:#aaa;border:0;border-radius:10px;padding:8px 14px;font-size:13px">🔇 Suara mati</button>
+<div class="top">
+<div><span class="dot"></span><b style="font-size:18px">DRM TRADE</b><span class="tag">PAPER</span></div>
+<button id="suara" onclick="toggleSuara()">🔇 Suara</button>
 </div>
-<div class="card">
-<div style="color:#aaa">PnL Hari Ini</div>
-<div class="big" id="pnl">$0.00</div>
-<small id="total"></small>
+
+<div class="grid">
+<div class="st"><span>PNL HARI INI</span><b id="pnl">$0.00</b></div>
+<div class="st"><span>PNL TOTAL</span><b id="tot">$0.00</b></div>
+<div class="st"><span>MENANG / KALAH</span><b id="wl">0 / 0</b><small id="wr"></small></div>
+<div class="st"><span>POSISI TERBUKA</span><b id="np">0</b></div>
 </div>
+
+<div class="card"><small>KURVA PNL (KUMULATIF)</small>
+<svg id="kurva" viewBox="0 0 300 80" width="100%"></svg></div>
 
 <div class="tabs">
 <button class="on" onclick="tab('pos',this)">Posisi</button>
@@ -50,147 +61,130 @@ small{color:#777}
 <div style="margin-bottom:8px"><span class="dot"></span><small id="liveinfo">Memuat sinyal...</small></div>
 <div id="feed"></div>
 </div>
-
 <small id="status">Memuat data...</small>
 
 <script>
-const SUPABASE_URL = 'https://qehuvoyfimfwijrmbpxc.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_WAlE9s4GwxiqoFbAQRBeWQ_jn6KdzLU';
+const SUPABASE_URL='https://qehuvoyfimfwijrmbpxc.supabase.co';
+const SUPABASE_KEY='sb_publishable_WAlE9s4GwxiqoFbAQRBeWQ_jn6KdzLU';
+const tg=Telegram.WebApp;tg.ready();tg.expand();
+let suaraOn=false,ac=null,tutupLihat=null,sudahLihat=null;
 
-const tg = Telegram.WebApp; tg.ready(); tg.expand();
-
-function tab(id, btn){
+function tab(id,btn){
   document.querySelectorAll('.sec').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.tabs button').forEach(e=>e.classList.remove('on'));
-  document.getElementById(id).classList.add('on');
-  btn.classList.add('on');
+  document.getElementById(id).classList.add('on');btn.classList.add('on');
 }
 function fmt(n){const v=Number(n)||0;return (v>=0?'+':'-')+'$'+Math.abs(v).toFixed(2);}
 function cls(n){return Number(n)>=0?'up':'down';}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function lalu(iso){
-  const d = Math.max(0, Math.round((Date.now() - new Date(iso)) / 1000));
-  if (d < 60) return d + ' dtk lalu';
-  if (d < 3600) return Math.round(d/60) + ' mnt lalu';
-  return Math.round(d/3600) + ' jam lalu';
+  const d=Math.max(0,Math.round((Date.now()-new Date(iso))/1000));
+  if(d<60)return d+' dtk lalu';
+  if(d<3600)return Math.round(d/60)+' mnt lalu';
+  return Math.round(d/3600)+' jam lalu';
 }
 async function ambil(path){
-  const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, { headers: { apikey: SUPABASE_KEY } });
-  if(!r.ok) throw new Error('HTTP ' + r.status);
+  const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:{apikey:SUPABASE_KEY}});
+  if(!r.ok)throw new Error('HTTP '+r.status);
   return r.json();
 }
 
-function render(rows){
-  const open = rows.filter(t=>t.status==='open');
-  const closed = rows.filter(t=>t.status!=='open');
-  const idTutup = new Set(closed.map(t=>t.id));
-if (tutupLihat) {
-  for (const t of closed) {
-    if (!tutupLihat.has(t.id)) {
-      const untung = Number(t.pnl_usd) >= 0;
-      bunyi(untung ? 'untung' : 'rugi');
-      try { tg.HapticFeedback.notificationOccurred(untung ? 'success' : 'error'); } catch(e) {}
-    }
-  }
-}
-tutupLihat = idTutup;
-  const today = new Date().toDateString();
-  const pnlToday = closed
-    .filter(t=>t.closed_at && new Date(t.closed_at).toDateString()===today)
-    .reduce((a,t)=>a+(Number(t.pnl_usd)||0),0);
-  const pnlTotal = closed.reduce((a,t)=>a+(Number(t.pnl_usd)||0),0);
-
-  const el = document.getElementById('pnl');
-  el.textContent = fmt(pnlToday);
-  el.className = 'big ' + cls(pnlToday);
-  document.getElementById('total').textContent =
-    'Total: ' + fmt(pnlTotal) + ' dari ' + closed.length + ' trade';
-
-  document.getElementById('pos').innerHTML = open.length
-    ? open.map(t=>'<div class="row"><span>'+esc(t.token_symbol)+' <small>$'+Number(t.size_usd).toFixed(0)+' | sisa '+Number(t.remaining_pct).toFixed(0)+'%</small></span><span>@ '+esc(t.entry_price)+'</span></div>').join('')
-    : '<small>Belum ada posisi terbuka.</small>';
-
-  document.getElementById('his').innerHTML = closed.length
-    ? closed.map(t=>'<div class="row"><span>'+esc(t.token_symbol)+' <small>'+esc(t.exit_reason||'')+'</small></span><span class="'+cls(t.pnl_usd)+'">'+fmt(t.pnl_usd)+'</span></div>').join('')
-    : '<small>Belum ada history trade.</small>';
-}
-
-let sudahLihat = null;
-function renderFeed(rows){
-  const baruBeli = [];
-  const html = rows.map(s=>{
-    const baru = sudahLihat && !sudahLihat.has(s.id);
-    if (baru && s.decision === 'dibeli') baruBeli.push(s);
-    let ubah = '<small>menunggu 5m</small>';
-    if (s.price_5m !== null && s.price_5m !== undefined){
-      if (Number(s.price_5m) === 0) {
-        ubah = '<span class="down">hilang</span>';
-      } else {
-        const p = (Number(s.price_5m) / Number(s.price) - 1) * 100;
-        ubah = '<span class="'+cls(p)+'">'+(p>=0?'+':'')+p.toFixed(1)+'% (5m)</span>';
-      }
-    }
-    return '<div class="sig'+(baru?' baru':'')+'">'
-      + '<div class="atas"><span>'+esc(s.token_symbol||'?')
-      + '<span class="badge b-'+esc(s.decision)+'">'+esc(s.decision)+'</span></span>'
-      + '<span>'+ubah+'</span></div>'
-      + '<small>'+esc(s.reason||'lolos semua aturan')+' · '+lalu(s.created_at)+'</small></div>';
-  }).join('');
-
-  document.getElementById('feed').innerHTML = html || '<small>Belum ada sinyal.</small>';
-  document.getElementById('liveinfo').textContent = rows.length
-    ? 'Sinyal terakhir ' + lalu(rows[0].created_at) + ' · ' + rows.length + ' terbaru'
-    : 'Belum ada sinyal';
-
-  sudahLihat = new Set(rows.map(s=>s.id));
-  if (baruBeli.length) {
-    try { tg.HapticFeedback.notificationOccurred('success'); } catch(e) {}    
-  }bunyi('beli');
-}
-let suaraOn = false, ac = null, tutupLihat = null;
 function toggleSuara(){
-  suaraOn = !suaraOn;
-  const b = document.getElementById('suara');
-  if (suaraOn) {
-    try {
-      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-      if (ac.state === 'suspended') ac.resume();
-    } catch(e) { suaraOn = false; }
-  }
-  b.textContent = suaraOn ? '🔔 Suara nyala' : '🔇 Suara mati';
-  if (suaraOn) bunyi('beli');
+  suaraOn=!suaraOn;
+  if(suaraOn){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();}catch(e){suaraOn=false;}}
+  document.getElementById('suara').textContent=suaraOn?'🔔 Suara':'🔇 Suara';
+  if(suaraOn)bunyi('beli');
 }
-function nada(f, mulai, dur){
-  const o = ac.createOscillator(), g = ac.createGain();
-  o.type = 'sine'; o.frequency.value = f;
-  g.gain.setValueAtTime(0.0001, ac.currentTime + mulai);
-  g.gain.exponentialRampToValueAtTime(0.25, ac.currentTime + mulai + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + mulai + dur);
-  o.connect(g); g.connect(ac.destination);
-  o.start(ac.currentTime + mulai);
-  o.stop(ac.currentTime + mulai + dur + 0.05);
+function nada(f,mulai,dur){
+  const o=ac.createOscillator(),g=ac.createGain();
+  o.type='sine';o.frequency.value=f;
+  g.gain.setValueAtTime(0.0001,ac.currentTime+mulai);
+  g.gain.exponentialRampToValueAtTime(0.25,ac.currentTime+mulai+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+mulai+dur);
+  o.connect(g);g.connect(ac.destination);
+  o.start(ac.currentTime+mulai);o.stop(ac.currentTime+mulai+dur+0.05);
 }
-function bunyi(jenis){
-  if (!suaraOn || !ac) return;
-  try {
-    if (jenis === 'beli') { nada(660, 0, 0.12); nada(880, 0.14, 0.18); }
-    else if (jenis === 'untung') { nada(784, 0, 0.12); nada(988, 0.12, 0.12); nada(1319, 0.24, 0.25); }
-    else if (jenis === 'rugi') { nada(330, 0, 0.2); nada(247, 0.2, 0.3); }
-  } catch(e) {}
+function bunyi(j){
+  if(!suaraOn||!ac)return;
+  try{
+    if(j==='beli'){nada(660,0,0.12);nada(880,0.14,0.18);}
+    else if(j==='untung'){nada(784,0,0.12);nada(988,0.12,0.12);nada(1319,0.24,0.25);}
+    else{nada(330,0,0.2);nada(247,0.2,0.3);}
+  }catch(e){}
 }
+
+function kurva(closed){
+  const el=document.getElementById('kurva');
+  const s=closed.filter(t=>t.closed_at).sort((a,b)=>new Date(a.closed_at)-new Date(b.closed_at));
+  if(s.length<2){el.innerHTML='<text x="150" y="45" fill="#7d8b99" font-size="11" text-anchor="middle">Menunggu data trade</text>';return;}
+  let c=0;const v=[0];
+  s.forEach(t=>{c+=Number(t.pnl_usd)||0;v.push(c);});
+  const mn=Math.min(...v,0),mx=Math.max(...v,0),r=(mx-mn)||1;
+  const x=i=>2+(i/(v.length-1))*296,y=n=>76-((n-mn)/r)*70;
+  const pts=v.map((n,i)=>x(i).toFixed(1)+','+y(n).toFixed(1)).join(' ');
+  const w=v[v.length-1]>=0?'#2ecc71':'#e74c3c';
+  el.innerHTML='<line x1="0" x2="300" y1="'+y(0).toFixed(1)+'" y2="'+y(0).toFixed(1)+'" stroke="#1e2a38" stroke-dasharray="3"/><polyline points="'+pts+'" fill="none" stroke="'+w+'" stroke-width="2" stroke-linejoin="round"/>';
+}
+
+function render(rows){
+  const open=rows.filter(t=>t.status==='open');
+  const closed=rows.filter(t=>t.status!=='open');
+  const idTutup=new Set(closed.map(t=>t.id));
+  if(tutupLihat){for(const t of closed){if(!tutupLihat.has(t.id)){
+    const u=Number(t.pnl_usd)>=0;bunyi(u?'untung':'rugi');
+    try{tg.HapticFeedback.notificationOccurred(u?'success':'error');}catch(e){}
+  }}}
+  tutupLihat=idTutup;
+
+  const today=new Date().toDateString();
+  const sum=a=>a.reduce((x,t)=>x+(Number(t.pnl_usd)||0),0);
+  const pt=sum(closed.filter(t=>t.closed_at&&new Date(t.closed_at).toDateString()===today));
+  const tot=sum(closed);
+  const w=closed.filter(t=>Number(t.pnl_usd)>0).length,l=closed.length-w;
+  const e1=document.getElementById('pnl');e1.textContent=fmt(pt);e1.className=cls(pt);
+  const e2=document.getElementById('tot');e2.textContent=fmt(tot);e2.className=cls(tot);
+  document.getElementById('wl').textContent=w+' / '+l;
+  document.getElementById('wr').textContent=closed.length?Math.round(w/closed.length*100)+'%':'';
+  document.getElementById('np').textContent=open.length;
+  kurva(closed);
+
+  document.getElementById('pos').innerHTML=open.length
+    ?open.map(t=>'<div class="row"><span>'+esc(t.token_symbol)+' <small>$'+Number(t.size_usd).toFixed(0)+' | sisa '+Number(t.remaining_pct).toFixed(0)+'%</small></span><span>@ '+esc(t.entry_price)+'</span></div>').join('')
+    :'<small>Belum ada posisi terbuka.</small>';
+  document.getElementById('his').innerHTML=closed.length
+    ?closed.map(t=>'<div class="row"><span>'+esc(t.token_symbol)+' <small>'+esc(t.exit_reason||'')+'</small></span><span class="'+cls(t.pnl_usd)+'">'+fmt(t.pnl_usd)+'</span></div>').join('')
+    :'<small>Belum ada history trade.</small>';
+}
+
+function renderFeed(rows){
+  let ada=false;
+  const html=rows.map(s=>{
+    const baru=sudahLihat&&!sudahLihat.has(s.id);
+    if(baru&&s.decision==='dibeli')ada=true;
+    let u='<small>menunggu 5m</small>';
+    if(s.price_5m!==null&&s.price_5m!==undefined){
+      if(Number(s.price_5m)===0)u='<span class="down">hilang</span>';
+      else{const p=(Number(s.price_5m)/Number(s.price)-1)*100;u='<span class="'+cls(p)+'">'+(p>=0?'+':'')+p.toFixed(1)+'% (5m)</span>';}
+    }
+    return '<div class="sig'+(baru?' baru':'')+'"><div class="a"><span>'+esc(s.token_symbol||'?')+'<span class="bd b-'+esc(s.decision)+'">'+esc(s.decision)+'</span></span><span>'+u+'</span></div><small>'+esc(s.reason||'lolos semua aturan')+' · '+lalu(s.created_at)+'</small></div>';
+  }).join('');
+  document.getElementById('feed').innerHTML=html||'<small>Belum ada sinyal.</small>';
+  document.getElementById('liveinfo').textContent=rows.length?'Sinyal terakhir '+lalu(rows[0].created_at)+' · '+rows.length+' terbaru':'Belum ada sinyal';
+  sudahLihat=new Set(rows.map(s=>s.id));
+  if(ada){bunyi('beli');try{tg.HapticFeedback.notificationOccurred('success');}catch(e){}}
+}
+
 async function load(){
-  const [a, b] = await Promise.allSettled([
+  const [a,b]=await Promise.allSettled([
     ambil('trades?select=*&order=opened_at.desc&limit=200'),
     ambil('signals?select=id,created_at,token_symbol,decision,reason,price,price_5m&order=created_at.desc&limit=40'),
   ]);
-  const pesan = [];
-  if (a.status === 'fulfilled') render(a.value); else pesan.push('trades: ' + a.reason.message);
-  if (b.status === 'fulfilled') renderFeed(b.value); else pesan.push('sinyal: ' + b.reason.message);
-  document.getElementById('status').textContent = pesan.length
-    ? 'Gagal memuat ' + pesan.join(', ')
-    : 'Diperbarui ' + new Date().toLocaleTimeString('id-ID');
+  const err=[];
+  if(a.status==='fulfilled')render(a.value);else err.push('trades: '+a.reason.message);
+  if(b.status==='fulfilled')renderFeed(b.value);else err.push('sinyal: '+b.reason.message);
+  document.getElementById('status').textContent=err.length?'Gagal memuat '+err.join(', '):'Diperbarui '+new Date().toLocaleTimeString('id-ID');
 }
 load();
-setInterval(load, 10000);
+setInterval(load,10000);
 </script>
 </body></html>
