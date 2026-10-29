@@ -184,7 +184,7 @@ function renderFeed(rows){
 async function load(){
   const [a,b]=await Promise.allSettled([
     ambil('trades?select=*&order=opened_at.desc&limit=200'),
-    ambil('signals?select=id,created_at,token_symbol,decision,reason,price,price_5m&order=created_at.desc&limit=40'),
+        ambil('signals?select=id,created_at,token_symbol,decision,reason,price,price_5m&decision=neq.pantau&order=created_at.desc&limit=40'),,
   ]);
   const err=[];
   if(a.status==='fulfilled')render(a.value);else err.push('trades: '+a.reason.message);
@@ -199,7 +199,7 @@ setInterval(load,10000);
 async function muatAgen(){
   try{
     const sejak=new Date(Date.now()-24*3600000).toISOString();
-    const rows=await ambil('signals?select=decision,created_at,rug_score&created_at=gte.'+sejak+'&order=created_at.desc&limit=1000');
+        const rows=await ambil('signals?select=decision,created_at,rug_score&decision=neq.pantau&created_at=gte.'+sejak+'&order=created_at.desc&limit=1000');
     const n=rows.length;
     const dibeli=rows.filter(s=>s.decision==='dibeli').length;
     const ditolak=rows.filter(s=>s.decision==='ditolak').length;
