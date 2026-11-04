@@ -20,7 +20,7 @@ body{margin:0;background:var(--bg);color:var(--t);font-family:ui-monospace,Menlo
 .st small{margin-left:6px;font-size:11px}
 .card{background:var(--p);border:1px solid var(--b);border-radius:10px;padding:12px;margin-bottom:8px}
 .tabs{display:flex;gap:6px;margin-bottom:8px}
-.tabs button{flex:1;padding:9px;border:1px solid var(--b);border-radius:8px;background:var(--p);color:var(--m);font:inherit;font-size:12px}
+.tabs button{flex:1;padding:9px 4px;border:1px solid var(--b);border-radius:8px;background:var(--p);color:var(--m);font:inherit;font-size:11px}
 .tabs button.on{background:var(--g);color:#000;font-weight:bold;border-color:var(--g)}
 .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--b)}
 .up{color:var(--g)}.down{color:var(--r)}
@@ -30,7 +30,7 @@ small{color:var(--m)}
 .sig .a{display:flex;justify-content:space-between;align-items:center}
 .bd{font-size:10px;padding:1px 7px;border-radius:6px;margin-left:8px;color:#000;font-weight:bold}
 .b-dibeli{background:var(--g)}.b-ditolak{background:var(--r);color:#fff}.b-nyaris{background:var(--y)}
-  .b-lolos{background:#3498db}
+.b-lolos{background:#3498db}
 .baru{animation:m 1.2s ease-out}
 @keyframes m{0%{opacity:0;transform:translateY(-10px);background:#1c2f24}100%{opacity:1;transform:none;background:transparent}}
 .ag{background:var(--p);border:1px solid var(--b);border-radius:10px;padding:10px;margin-bottom:8px;font-size:13px}
@@ -58,7 +58,8 @@ small{color:var(--m)}
 <button class="on" onclick="tab('pos',this)">Posisi</button>
 <button onclick="tab('his',this)">History</button>
 <button onclick="tab('live',this)">Live</button>
-  <button onclick="tab('agen',this)">Agen</button>
+<button onclick="tab('agen',this)">Agen</button>
+<button onclick="tab('prog',this)">Progres</button>
 </div>
 
 <div id="pos" class="sec on card"></div>
@@ -67,7 +68,8 @@ small{color:var(--m)}
 <div style="margin-bottom:8px"><span class="dot"></span><small id="liveinfo">Memuat sinyal...</small></div>
 <div id="feed"></div>
 </div>
-  <div id="agen" class="sec"></div>
+<div id="agen" class="sec"></div>
+<div id="prog" class="sec"></div>
 <small id="status">Memuat data...</small>
 
 <script>
@@ -184,26 +186,25 @@ function renderFeed(rows){
 async function load(){
   const [a,b]=await Promise.allSettled([
     ambil('trades?select=*&order=opened_at.desc&limit=200'),
-        ambil('signals?select=id,created_at,token_symbol,decision,reason,price,price_5m&decision=neq.pantau&order=created_at.desc&limit=40'),,
+    ambil('signals?select=id,created_at,token_symbol,decision,reason,price,price_5m&decision=neq.pantau&order=created_at.desc&limit=40'),
   ]);
   const err=[];
   if(a.status==='fulfilled')render(a.value);else err.push('trades: '+a.reason.message);
   if(b.status==='fulfilled')renderFeed(b.value);else err.push('sinyal: '+b.reason.message);
   document.getElementById('status').textContent=err.length?'Gagal memuat '+err.join(', '):'Diperbarui '+new Date().toLocaleTimeString('id-ID');
 }
-load();
-setInterval(load,10000);
- function kartuAgen(nama,tag,warna,b1,b2){
+
+function kartuAgen(nama,tag,warna,b1,b2){
   return '<div class="ag"><div class="ah"><b>'+nama+'</b><span class="at" style="color:'+warna+';border-color:'+warna+'">'+tag+'</span></div><div>'+b1+'</div><small>'+b2+'</small></div>';
 }
+
 async function muatAgen(){
   try{
     const sejak=new Date(Date.now()-24*3600000).toISOString();
-        const rows=await ambil('signals?select=decision,created_at,rug_score&decision=neq.pantau&created_at=gte.'+sejak+'&order=created_at.desc&limit=1000');
+    const rows=await ambil('signals?select=decision,created_at,rug_score&decision=neq.pantau&created_at=gte.'+sejak+'&order=created_at.desc&limit=1000');
     const n=rows.length;
-    const dibeli=rows.filter(s=>s.decision==='dibeli').length;
-    const ditolak=rows.filter(s=>s.decision==='ditolak').length;
-    const nyaris=rows.filter(s=>s.decision==='nyaris').length;
+    const hitung=d=>rows.filter(s=>s.decision===d).length;
+    const dibeli=hitung('dibeli'),ditolak=hitung('ditolak'),nyaris=hitung('nyaris'),lolos=hitung('lolos');
     const rugIsi=rows.filter(s=>s.rug_score!==null).length;
     const menit=n?(Date.now()-new Date(rows[0].created_at))/60000:9999;
     const terakhir=n?lalu(rows[0].created_at):'-';
@@ -213,19 +214,47 @@ async function muatAgen(){
     const warnaBot=hidup?hijau:kuning;
     const np=document.getElementById('np').textContent;
     const tot=document.getElementById('tot').textContent;
+    const mati=lolos>0&&dibeli===0;
     document.getElementById('agen').innerHTML=
-      kartuAgen('SCANNER',tagBot,warnaBot,n+' sinyal tercatat / 24 jam','terakhir '+terakhir+' · '+nyaris+' nyaris, '+dibeli+' dibeli')
+      kartuAgen('SCANNER',tagBot,warnaBot,n+' sinyal tercatat / 24 jam','terakhir '+terakhir+' · '+nyaris+' nyaris, '+lolos+' lolos, '+dibeli+' dibeli')
       +kartuAgen('VERIFIKASI SILANG',tagBot,warnaBot,ditolak+' ditolak / 24 jam','cek likuiditas dan harga di DexScreener')
       +kartuAgen('RUG CHECK','BELUM AKTIF',abu,rugIsi+' sinyal sudah dianalisis (uji)','belum dipasang di bot, masih tahap pengujian')
       +kartuAgen('SIZER','TETAP',hijau,'$25 per posisi · maks 5 posisi','belum berbasis modal')
-      +kartuAgen('EXECUTOR','SIMULASI',hijau,np+' posisi terbuka','slippage simulasi 3% masuk dan keluar')
+      +kartuAgen('EXECUTOR',mati?'DIMATIKAN':'SIMULASI',mati?abu:hijau,np+' posisi terbuka',mati?'pembelian dimatikan, hanya mencatat sinyal':'slippage simulasi 3% masuk dan keluar')
       +kartuAgen('LOGGER',tagBot,warnaBot,n+' keputusan / 24 jam','tiap sinyal dicatat beserta alasannya')
       +kartuAgen('EQUITY','PNL',abu,tot,'dari trade yang sudah ditutup');
   }catch(e){
     document.getElementById('agen').innerHTML='<small>Gagal memuat agen: '+esc(e.message)+'</small>';
   }
 }
+
+async function muatProgres(){
+  try{
+    const rows=await ambil('progres_hipotesis?select=*');
+    const BS=30,BT=15;
+    const horizon={'H4 momentum cepat':'horizon 20 menit','H5 ledakan volume':'horizon 60 menit','H6 pump 24 jam':'horizon 60 menit'};
+    let h='<div class="ag"><small>Data sejak 3 Nov 2026 17.14 WIB. Hanya hitungan jumlah, tanpa hasil harga. Batas: minimal '+BS+' sinyal dari '+BT+' token unik. Tes dijalankan sekali, Jumat 6 Nov 2026.</small></div>';
+    rows.forEach(r=>{
+      if(r.nama==='total sinyal'){
+        h+=kartuAgen('TOTAL DATA BARU','TERKUMPUL','#7d8b99',r.sinyal+' sinyal','dari '+r.token_unik+' token unik');
+        return;
+      }
+      const okS=r.sinyal>=BS,okT=r.token_unik>=BT,siap=okS&&okT;
+      h+=kartuAgen(r.nama.toUpperCase(),siap?'SIAP DIUJI':'BELUM CUKUP',siap?'#2ecc71':'#f1c40f',
+        r.sinyal+' / '+BS+' sinyal · '+r.token_unik+' / '+BT+' token',
+        (horizon[r.nama]||'')+' · '+(okS?'sinyal cukup':'sinyal kurang')+', '+(okT?'token cukup':'token kurang'));
+    });
+    document.getElementById('prog').innerHTML=h;
+  }catch(e){
+    document.getElementById('prog').innerHTML='<small>Gagal memuat progres: '+esc(e.message)+'</small>';
+  }
+}
+
+load();
+setInterval(load,10000);
 muatAgen();
-setInterval(muatAgen,20000); 
+setInterval(muatAgen,20000);
+muatProgres();
+setInterval(muatProgres,60000);
 </script>
 </body></html>
